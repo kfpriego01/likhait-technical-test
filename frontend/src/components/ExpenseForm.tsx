@@ -9,6 +9,7 @@ import { TextField, SelectBox, Button } from "../vibes";
 import { useExpenseForm } from "../hooks/useExpenseForm";
 import { fetchCategories, createCategory } from "../services/api";
 import { COLORS } from "../constants/colors";
+import { formatDate } from "../utils/expenseUtils";
 
 interface ExpenseFormProps {
   initialData?: Partial<ExpenseFormData>;
@@ -29,11 +30,16 @@ export function ExpenseForm({
       onSubmit,
     });
 
-  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
+ const [categories, setCategories] = useState<
+  Array<{ id: number; name: string }>
+>([]);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryError, setNewCategoryError] = useState("");
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [dateError, setDateError] = useState("");
+
+  const today = formatDate(new Date());
 
   useEffect(() => {
     loadCategories();
@@ -65,6 +71,17 @@ export function ExpenseForm({
       setNewCategoryError("Failed to create category. It may already exist.");
     } finally {
       setIsAddingCategory(false);
+    }
+  };
+
+  const handleDateChange = (value: string) => {
+    handleChange("date", value);
+    if (value > today) {
+      setDateError(
+        "Expense date cannot be in the future. Please select today or a past date.",
+      );
+    } else {
+      setDateError("");
     }
   };
 
@@ -124,6 +141,31 @@ export function ExpenseForm({
     gap: "0.5rem",
   };
 
+  const dateLabelStyle: React.CSSProperties = {
+    display: "block",
+    marginBottom: "0.25rem",
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    color: COLORS.text.primary,
+  };
+
+  const dateInputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "0.5rem",
+    border: `1px solid ${dateError || errors.date ? COLORS.danger : COLORS.border}`,
+    borderRadius: "4px",
+    fontSize: "1rem",
+    color: COLORS.text.primary,
+    boxSizing: "border-box",
+  };
+
+  const dateErrorStyle: React.CSSProperties = {
+    fontSize: "0.75rem",
+    color: COLORS.danger,
+    marginTop: "0.25rem",
+    display: "block",
+  };
+
   const categoryOptions = [
     ...EXPENSE_CATEGORIES.map((category) => ({
       value: category,
@@ -179,15 +221,21 @@ export function ExpenseForm({
           </button>
         </div>
 
-        <TextField
-          label="Date"
-          type="date"
-          value={formData.date}
-          onChange={(e) => handleChange("date", e.target.value)}
-          error={errors.date}
-          fullWidth
-          required
-        />
+        {/* Date field uses native input to guarantee max attribute support */}
+        <div>
+          <label style={dateLabelStyle}>Date</label>
+          <input
+            type="date"
+            value={formData.date}
+            max={today}
+            onChange={(e) => handleDateChange(e.target.value)}
+            required
+            style={dateInputStyle}
+          />
+          {(dateError || errors.date) && (
+            <span style={dateErrorStyle}>{dateError || errors.date}</span>
+          )}
+        </div>
 
         <div style={buttonGroupStyle}>
           <Button
